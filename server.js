@@ -186,5 +186,116 @@ app.post('/home/pick_color', function(req, res) {
     });
 });
 
+app.get('/team_stats', function(req, res)
+{
+  var query = 'select * from football_games;';
+  var win_count = 'SELECT COUNT(*) FROM football_games WHERE home_score>visitor_score;';
+  var loss_count = 'SELECT COUNT(*) FROM football_games WHERE home_score<visitor_score;';
+  //db.any(query)
+  //db.any(win_count)
+  db.task('get-everything', task => {
+      return task.batch([
+          task.any(query),
+          task.any(win_count),
+          task.any(loss_count)
+        ]);
+ })
+  .then(function (rows) {
+        //console.log(info);
+        res.render('pages/team_stats',{
+        my_title: "Team Stats",
+        data: rows[0],
+        wins: rows[1],
+        losses: rows[2]
+      })
+      })
+        .catch(function (err) {
+            // display error message in case an error
+           //req.flash('error', err);
+           
+           console.log(err)
+            res.render('pages/home', {
+                title: 'Home Page',
+                data: '',
+                color: '',
+                color_msg: ''
+            })
+        })
+});
+
+app.get('/player_info/', function(req, res)
+{
+  var query = 'select * from football_players;';
+  db.any(query)
+  .then(function (rows) {
+        //console.log(info);
+        res.render('pages/player_info',{
+        my_title: "Player Info",
+        data: rows,
+        player_info:'',
+        number_of_games:'',
+        avg_rush:''
+      })
+      })
+        .catch(function (err) {
+            // display error message in case an error
+           //req.flash('error', err);
+           
+           console.log(err)
+            res.render('pages/home', {
+                my_title: 'Home Page',
+                data: '',
+                color: '',
+                color_msg: ''
+            })
+        })
+});
+
+app.get('/player_info/select_player', function(req, res)
+{
+  var player_choice = req.query.player_choice;
+  console.log(player_choice);
+  var year1 = 'SELECT * FROM football_players WHERE id=' + player_choice + ';';
+  var games = 'SELECT COUNT (*) FROM football_games WHERE ' + player_choice + ' = ANY(players)';
+  var avg_rush_yards = 'SELECT (rushing_yards::DECIMAL/(SELECT COUNT (*) FROM football_games WHERE ' + player_choice + '=ANY(players))) AS ry FROM football_players WHERE id=' + player_choice +';'
+  console.log(year1);
+  console.log(games);
+  console.log(avg_rush_yards);
+
+  var query = 'select * from football_players;';
+  db.task('get-everything', task => {
+      return task.batch([
+          task.any(query),
+          task.any(year1),
+          task.any(games),
+          task.any(avg_rush_yards)
+        ]);
+ })
+  .then(function (player_choice) {
+        console.log(player_choice[1][0]);
+        //console.log(games);
+        res.render('pages/player_info',{
+        my_title: "Player Info",
+        player_info: player_choice[1][0],
+        data: player_choice[0],
+        number_of_games: player_choice[2],
+        avg_rush: player_choice[3]
+      })
+      })
+        .catch(function (err) {
+            // display error message in case an error
+           //req.flash('error', err);
+           
+           console.log(err)
+            res.render('pages/home', {
+                my_title: 'Home Page',
+                data: '',
+                color: '',
+                color_msg: ''
+            })
+        })
+  
+});
+
 app.listen(3000);
 console.log('3000 is the magic port');
